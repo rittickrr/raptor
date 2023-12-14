@@ -18,13 +18,16 @@
 double radiative_transfer_unpolarized(double *lightpath, int steps,
                                       double *frequency,
                                       double IQUV[num_frequencies][4],
+                                      double I_radial_cut[num_frequencies][5],
                                       double tau[num_frequencies]) {
 
     int path_counter;
     double pitch_ang, nu_p;
 
-    double X_u[4], k_d[4], k_u[4], k_u_s[4], dl_current, dl_current_s;
+    double X_u[4], k_d[4], k_u[4], k_u_s[4], dl_current, dl_current_s, r_path, r_path_prev = cutoff_outer;
     double jI, jQ, jU, jV, rQ, rU, rV, aI, aQ, aU, aV;
+
+    int rmin = 0;
 
     double Rg = GGRAV * MBH / SPEED_OF_LIGHT / SPEED_OF_LIGHT; // Rg in cm
     double g_dd[4][4], g_uu[4][4];
@@ -46,7 +49,36 @@ double radiative_transfer_unpolarized(double *lightpath, int steps,
     }
     modvar.igrid_c = -1;
 
+
+// Check the minimum radius reached by the photon in the geodesic
+#if (RADIAL_CUT)
     for (path_counter = steps - 1; path_counter > 0; path_counter--) {
+        LOOP_i {
+            X_u[i] = lightpath[path_counter * 9 + i];
+            k_u[i] = lightpath[path_counter * 9 + 4 + i];
+        }
+        r_path = get_r(X_u);
+        if (r_path <= r_path_prev){
+            if (r_path > 960) {
+                rmin = 1;
+                }
+            if (r_path > 240 && r_path <= 960) {
+                rmin = 2;
+                }
+            if (r_path > 60 && r_path <= 240) {
+                rmin = 3;
+                }    
+            if (r_path > 30 && r_path <= 60) {
+                rmin = 4;
+                }
+            if (r_path <= 30) {
+                rmin = 5;
+                break;
+                }
+            }
+    }
+    for(int j = 0; j < rmin; j++){
+     for (path_counter = steps - 1; path_counter > 0; path_counter--) {
         // Current position, wave vector, and dlambda
         LOOP_i {
             X_u[i] = lightpath[path_counter * 9 + i];
@@ -94,7 +126,101 @@ double radiative_transfer_unpolarized(double *lightpath, int steps,
                                      &aQ, &aU, &aV, nu_p, modvar, pitch_ang);
 #else
                 evaluate_coeffs_single(&jI, &jQ, &jU, &jV, &rQ, &rU, &rV, &aI,
-                                       &aQ, &aU, &aV, nu_p, modvar, pitch_ang);
+                                       &aQ, &aU, &aV, nu_p, modvar, pitch_ang, (j+1), get_r(X_u));
+#endif
+                double C = Rg * PLANCK_CONSTANT /
+                           (ELECTRON_MASS * SPEED_OF_LIGHT * SPEED_OF_LIGHT);
+
+                double dtau = (aI * dl_current_s * C + dtau_old);
+                double K_inv = aI;
+                double j_inv = jI;
+
+                tau[f] += dtau;
+#if (DEBUG)
+                if ((j_inv != j_inv || isnan(Icurrent))) {
+                    fprintf(stderr, "NaN emissivity! I = %+.15e\n", Icurrent);
+                    fprintf(stderr, "NaN emissivity! j_nu = %+.15e\n", j_inv);
+                    fprintf(stderr, "NaN emissivity! nu_plasmaframe = %+.15e\n",
+                            nu_p);
+                    fprintf(stderr, "NaN emissivity! ne %e te %e B %e\n",
+                            modvar.n_e, modvar.theta_e, modvar.B);
+                    fprintf(stderr, "NaN emissivity! Unorm %e\n",
+                            four_velocity_norm(X_u, modvar.U_u) + 1);
+                    fprintf(stderr, "NaN emissivity! knorm %e\n",
+                            four_velocity_norm(X_u, k_u));
+                }
+#endif
+
+                if (jI == jI) {
+                    double Ii = Icurrent;
+                    double S = j_inv / K_inv;
+                    if (K_inv == 0)
+                        Icurrent = Ii;
+                    else if (dtau < 1.e-5)
+                        Icurrent = Ii - (Ii - S) * (0.166666667 * dtau *
+                                                    (6. - dtau * (3. - dtau)));
+                    else {
+                        double efac = exp(-dtau);
+                        Icurrent = Ii * efac + S * (1. - efac);
+                    }
+                }
+                dtau_old = 0;
+
+                I_radial_cut[f][j] = Icurrent;
+            }
+        }
+    }}
+#else
+
+        for (path_counter = steps - 1; path_counter > 0; path_counter--) {
+        // Current position, wave vector, and dlambda
+        LOOP_i {
+            X_u[i] = lightpath[path_counter * 9 + i];
+            k_u[i] = lightpath[path_counter * 9 + 4 + i];
+        }
+        dl_current = fabs(lightpath[(path_counter - 1) * 9 + 8]);
+
+        metric_dd(X_u, g_dd);
+        metric_uu(X_u, g_uu);
+
+        if (get_fluid_params(X_u, &modvar)) {
+            lower_index(X_u, k_u, k_d);
+            pitch_ang = pitch_angle(X_u, k_u, modvar.B_u, modvar.U_u);
+
+            if (pitch_ang < 1e-9)
+                continue;
+
+            for (int f = 0; f < num_frequencies; f++) {
+                // Obtain pitch angle: still no units (geometric)
+
+                Icurrent = IQUV[f][0];
+
+                dl_current_s =
+                    dl_current *
+                    (ELECTRON_MASS * SPEED_OF_LIGHT * SPEED_OF_LIGHT) /
+                    (PLANCK_CONSTANT * frequency[f]);
+
+                // CGS UNITS USED FROM HERE ON OUT
+                //////////////////////////////////
+
+                // Scale the wave vector to correct energy
+                LOOP_i k_u_s[i] =
+                    k_u[i] * PLANCK_CONSTANT * frequency[f] /
+                    (ELECTRON_MASS * SPEED_OF_LIGHT * SPEED_OF_LIGHT);
+
+                // lower the index of the wavevector
+                lower_index(X_u, k_u_s, k_d);
+
+                // Compute the photon frequency in the plasma frame:
+                nu_p = freq_in_plasma_frame(modvar.U_u, k_d);
+                // Obtain emission coefficient in current plasma conditions
+
+#if (EMISUSER)
+                evaluate_coeffs_user(&jI, &jQ, &jU, &jV, &rQ, &rU, &rV, &aI,
+                                     &aQ, &aU, &aV, nu_p, modvar, pitch_ang);
+#else
+                evaluate_coeffs_single(&jI, &jQ, &jU, &jV, &rQ, &rU, &rV, &aI,
+                                       &aQ, &aU, &aV, nu_p, modvar, pitch_ang, 0, get_r(X_u));
 #endif
                 double C = Rg * PLANCK_CONSTANT /
                            (ELECTRON_MASS * SPEED_OF_LIGHT * SPEED_OF_LIGHT);
@@ -138,6 +264,7 @@ double radiative_transfer_unpolarized(double *lightpath, int steps,
             }
         }
     }
+#endif
 
     // IQUV[0] = Icurrent * pow(frequency, 3.);
 
