@@ -319,13 +319,23 @@ double j_I_power(double theta_e, double n_e, double nu, double B,
 }
 
 double j_I(double theta_e, double n_e, double nu, double B, double theta_B) {
-#if (DF == KAPPA)
-    return j_I_kappa(theta_e, n_e, nu, B, theta_B);
-#elif (DF == POWER)
-    return j_I_power(theta_e, n_e, nu, B, theta_B);
-#elif (DF == TH)
-    return j_I_thermal(theta_e, n_e, nu, B, theta_B);
+
+    double j_I = 0;
+
+#if (SYNCHROTRON && DF == KAPPA)
+    j_I += j_I_kappa(theta_e, n_e, nu, B, theta_B);
+#elif (SYNCHROTRON && DF == POWER)
+    j_I += j_I_power(theta_e, n_e, nu, B, theta_B);
+#elif (SYNCHROTRON && DF == TH)
+    j_I += j_I_thermal(theta_e, n_e, nu, B, theta_B);
 #endif
+
+#if (BREMSSTRAHLUNG)
+    j_I += j_bremss(nu, n_e, theta_e);
+#endif
+
+    return j_I;
+
 }
 double j_Q_kappa(double theta_e, double n_e, double nu, double B,
                  double theta_B) {
@@ -464,6 +474,7 @@ double j_V_power(double theta_e, double n_e, double nu, double B,
 }
 
 double j_V(double theta_e, double n_e, double nu, double B, double theta_B) {
+
 #if (DF == KAPPA)
     return j_V_kappa(theta_e, n_e, nu, B, theta_B);
 #elif (DF == POWER)
@@ -529,7 +540,16 @@ double a_I_kappa(double theta_e, double n_e, double nu, double B,
 double a_I_thermal(double theta_e, double n_e, double nu, double B,
                    double theta_B, double j_I_thermal) {
     double B_nu = planck_function(nu, theta_e); // Planck function
-    return j_I_thermal / B_nu;
+    double j_I = 0;
+
+#if (SYNCHROTRON)
+    j_I += j_I_thermal;
+#endif
+#if (BREMSSTRAHLUNG)
+    j_I += j_bremss(nu, n_e, theta_e);
+#endif
+
+    return j_I / (B_nu + 1.e-100);
 }
 
 double a_I_power(double theta_e, double n_e, double nu, double B,
@@ -703,3 +723,64 @@ double a_V(double theta_e, double n_e, double nu, double B, double theta_B,
 #endif
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//BREMSSTRAHLUNG 
+
+double j_bremss(double nu, double n_e, double theta_e)
+{
+  if (theta_e < THETAE_MIN) 
+    return 0.;
+
+  double Te = theta_e * ELECTRON_MASS * SPEED_OF_LIGHT * SPEED_OF_LIGHT / BOLTZMANN_CONSTANT;
+  double x = PLANCK_CONSTANT*nu/(BOLTZMANN_CONSTANT*Te);
+  double efac = 0.;
+  double gff = 1.2;
+  
+  if (x < 1.e-3) {
+    efac = (24. - 24.*x + 12.*x*x - 4.*x*x*x + x*x*x*x) / 24.;
+  } else {
+    efac = exp(-x);
+  }
+
+#if 1   // following Straub+ 2012
+  double Fei=0., Fee=0., fei=0., fee=0.;
+
+  double SOMMERFELD_ALPHA = 1. / 137.036;
+  double eta = 0.5616;
+  double e_charge = 4.80e-10; // in esu
+  double re = e_charge * e_charge / ELECTRON_MASS / SPEED_OF_LIGHT / SPEED_OF_LIGHT;
+  double gammaE = 0.577; // = - Log[0.5616] 
+
+  if (x > 1) {
+    gff = sqrt(3. / M_PI / x);
+  } else {
+    gff = sqrt(3.) / M_PI * log(4 / gammaE / x);
+  }
+
+  if (theta_e < 1) {
+    Fei = 4. * sqrt(2.*theta_e/M_PI/M_PI/M_PI) * (1. + 1.781*pow(theta_e,1.34));
+    Fee = 20./9./sqrt(M_PI) * (44. - 3.*M_PI*M_PI) * pow(theta_e,1.5);
+    Fee *= (1. + 1.1*theta_e + theta_e*theta_e - 1.25*pow(theta_e,2.5));
+  } else {
+    Fei = 9.*theta_e/(2.*M_PI) * ( log(1.123 * theta_e + 0.48) + 1.5 );
+    Fee = 24. * theta_e * ( log(2.*eta*theta_e) + 1.28 );
+  }
+  fei = n_e * n_e * SIGMA_THOMSON * SOMMERFELD_ALPHA * ELECTRON_MASS * SPEED_OF_LIGHT * SPEED_OF_LIGHT * SPEED_OF_LIGHT * Fei;
+  fee = n_e * n_e * re * re * SOMMERFELD_ALPHA * ELECTRON_MASS * SPEED_OF_LIGHT * SPEED_OF_LIGHT * SPEED_OF_LIGHT * Fee;
+
+  return (fei+fee) / (4.*M_PI) * PLANCK_CONSTANT/BOLTZMANN_CONSTANT/Te * efac * gff;
+ 
+#else 
+  // Method from Rybicki & Lightman, ultimately from Novikov & Thorne
+
+  double rel = (1. + 4.4e-10*Te);
+
+  double jv = 1./(4.*M_PI)*pow(2,5)*M_PI*pow(EE,6)/(3.*ELECTRON_MASS*pow(CL,3));
+  jv *= pow(2.*M_PI/(3.*BOLTZMANN_CONSTANT*ELECTRON_MASS),1./2.);
+  jv *= pow(Te,-1./2.)*Ne*Ne;
+  jv *= efac*rel*gff;
+
+  return jv;
+#endif 
+
+}
