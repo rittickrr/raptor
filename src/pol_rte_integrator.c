@@ -309,12 +309,54 @@ void evaluate_coeffs_user(double *jI, double *jQ, double *jU, double *jV,
 void evaluate_coeffs_single(double *jI, double *jQ, double *jU, double *jV,
                             double *rQ, double *rU, double *rV, double *aI,
                             double *aQ, double *aU, double *aV, double nu_p,
-                            struct GRMHD modvar, double pitch_ang) {
+                            struct GRMHD modvar, double pitch_ang, int rmin, double r_current) {
 
-    *jI = j_I(modvar.theta_e, modvar.n_e, nu_p, modvar.B, pitch_ang);
-    *jQ = j_Q(modvar.theta_e, modvar.n_e, nu_p, modvar.B, pitch_ang);
-    *jU = 0.;
-    *jV = j_V(modvar.theta_e, modvar.n_e, nu_p, modvar.B, pitch_ang);
+    *jI = 0;
+    *aI = 0;
+
+    if(rmin == 5 && r_current <= 30){
+        *jI = j_I(modvar.theta_e, modvar.n_e, nu_p, modvar.B, pitch_ang);
+        *jQ = j_Q(modvar.theta_e, modvar.n_e, nu_p, modvar.B, pitch_ang);
+        *jU = 0.;
+        *jV = j_V(modvar.theta_e, modvar.n_e, nu_p, modvar.B, pitch_ang);
+    }
+
+    else if(rmin == 4 && r_current > 30 && r_current <= 60){
+        *jI = j_I(modvar.theta_e, modvar.n_e, nu_p, modvar.B, pitch_ang);
+        *jQ = j_Q(modvar.theta_e, modvar.n_e, nu_p, modvar.B, pitch_ang);
+        *jU = 0.;
+        *jV = j_V(modvar.theta_e, modvar.n_e, nu_p, modvar.B, pitch_ang);
+    }
+
+    else if(rmin == 3 && r_current > 60 && r_current <= 240){
+        *jI = j_I(modvar.theta_e, modvar.n_e, nu_p, modvar.B, pitch_ang);
+        *jQ = j_Q(modvar.theta_e, modvar.n_e, nu_p, modvar.B, pitch_ang);
+        *jU = 0.;
+        *jV = j_V(modvar.theta_e, modvar.n_e, nu_p, modvar.B, pitch_ang);
+    }
+
+    else if(rmin == 2 && r_current > 240 && r_current <= 960){
+        *jI = j_I(modvar.theta_e, modvar.n_e, nu_p, modvar.B, pitch_ang);
+        *jQ = j_Q(modvar.theta_e, modvar.n_e, nu_p, modvar.B, pitch_ang);
+        *jU = 0.;
+        *jV = j_V(modvar.theta_e, modvar.n_e, nu_p, modvar.B, pitch_ang);
+    }
+
+    if(rmin == 1 && r_current > 960){
+        *jI = j_I(modvar.theta_e, modvar.n_e, nu_p, modvar.B, pitch_ang);
+        *jQ = j_Q(modvar.theta_e, modvar.n_e, nu_p, modvar.B, pitch_ang);
+        *jU = 0.;
+        *jV = j_V(modvar.theta_e, modvar.n_e, nu_p, modvar.B, pitch_ang);
+    }
+
+     if(rmin == 0){
+        *jI = j_I(modvar.theta_e, modvar.n_e, nu_p, modvar.B, pitch_ang);
+        *jQ = j_Q(modvar.theta_e, modvar.n_e, nu_p, modvar.B, pitch_ang);
+        *jU = 0.;
+        *jV = j_V(modvar.theta_e, modvar.n_e, nu_p, modvar.B, pitch_ang);
+    }
+
+    double jIdummy = j_I(modvar.theta_e, modvar.n_e, nu_p, modvar.B, pitch_ang);
 
     *rQ = rho_Q(modvar.theta_e, modvar.n_e, nu_p, modvar.B, pitch_ang);
     *rU = 0.;
@@ -607,12 +649,15 @@ void pol_integration_step(struct GRMHD modvar, double frequency,
 
     // POLARIZED EMISSION/ABSORPTION COEFFS
     ///////////////////////////////////////
+int rmin_dum = 0; // garbage values 
+double r_current_dum = 0; //garbage values
+
 #if (EMISUSER)
               	evaluate_coeffs_user(&jI, &jQ, &jU, &jV, &rQ, &rU, &rV, &aI,
                                      &aQ, &aU, &aV, nu_p, modvar, pitch_ang);
 #else
                 evaluate_coeffs_single(&jI, &jQ, &jU, &jV, &rQ, &rU, &rV, &aI,
-                                       &aQ, &aU, &aV, nu_p, modvar, pitch_ang);
+                                       &aQ, &aU, &aV, nu_p, modvar, pitch_ang, rmin_dum, r_current_dum);
 #endif
 
 
