@@ -33,9 +33,9 @@
 #define IMGFILE (1)
 #define SPECFILE (1)
 #define RAD_TRANS (1)
-#define POL (1)
+#define POL (0)
 
-#define num_frequencies 1
+#define num_frequencies (50)
 
 #define FREQFILE (0)
 #define FREQLOG (1)
@@ -43,6 +43,10 @@
 #define FREQS (FREQLOG)
 
 #define EMISUSER (0)
+#define RADIAL_CUT (1)
+
+#define BREMSSTRAHLUNG (1)
+#define SYNCHROTRON (1)
 
 #define UNIF (1)
 
@@ -52,11 +56,17 @@
 #define num_pixels_1d 10
 #define tot_pixels 100
 
-#define USERSPEC (0)
-#define nspec 4
+#define USERSPEC (1)
+
+#if (RADIAL_CUT)
+#define nspec (5)
+#else
+#define nspec (6) 
+#endif
 
 typedef struct Camera {
     double IQUV[tot_pixels][num_frequencies][4]; // intensity
+    double I_radial_cut[tot_pixels][num_frequencies][5]; // intensity with local radial cuts
     double tau[tot_pixels][num_frequencies];     // intensity
     double tauF[tot_pixels][num_frequencies];    // intensity
     double pdf[tot_pixels][num_frequencies];    // intensity
@@ -128,7 +138,7 @@ typedef struct Camera {
 // INTEGRATOR PARAMETERS
 ////////////////////////
 
-#define RT_OUTER_CUTOFF (50.) // Stop polarized integration beyond this radius
+#define RT_OUTER_CUTOFF (1000.) // Stop polarized integration beyond this radius
 
 #define delta_num (1.e-4) // Used for numerical derivatives
 #define max_steps (1e4)   // Maximum number of integration steps
@@ -139,7 +149,7 @@ typedef struct Camera {
 #define VER (2)              //
 #define RK4 (3)              //
 #define RK45 (4)             //
-#define int_method (RK4)
+#define int_method (RK45)
 
 // CONSTANTS
 ////////////
@@ -156,6 +166,7 @@ typedef struct Camera {
 #define MSUN (1.989e33)
 #define KPCTOCM (3.086e21)
 #define MPoME (PROTON_MASS / ELECTRON_MASS)
+#define SIGMA_THOMSON (0.665245873e-24  )
 
 // MACROS
 /////////
