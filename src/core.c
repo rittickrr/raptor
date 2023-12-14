@@ -132,9 +132,22 @@ void calculate_image_block(struct Camera *intensityfield,
                                          &(*intensityfield).tauF[pixel][f]);
         }
 
-#else
+#elif (RADIAL_CUT)
         radiative_transfer_unpolarized(lightpath2, steps, frequencies,
                                        (*intensityfield).IQUV[pixel],
+                                       (*intensityfield).I_radial_cut[pixel],
+                                       &(*intensityfield).tau[pixel]);
+        for (int f = 0; f < num_frequencies; f++) {
+            (*intensityfield).I_radial_cut[pixel][f][0] *= pow(frequencies[f], 3.);
+            (*intensityfield).I_radial_cut[pixel][f][1] *= pow(frequencies[f], 3.);
+            (*intensityfield).I_radial_cut[pixel][f][2] *= pow(frequencies[f], 3.);
+            (*intensityfield).I_radial_cut[pixel][f][3] *= pow(frequencies[f], 3.);
+            (*intensityfield).I_radial_cut[pixel][f][4] *= pow(frequencies[f], 3.);
+        }
+#else 
+         radiative_transfer_unpolarized(lightpath2, steps, frequencies,
+                                       (*intensityfield).IQUV[pixel],
+                                       (*intensityfield).I_radial_cut[pixel],
                                        &(*intensityfield).tau[pixel]);
         for (int f = 0; f < num_frequencies; f++) {
             (*intensityfield).IQUV[pixel][f][0] *= pow(frequencies[f], 3.);
@@ -174,6 +187,11 @@ void compute_spec(struct Camera *intensityfield,
                 // stokes V
                 energy_spectrum[freq][3] += S_V * dA;
 
+#elif (RADIAL_CUT)
+                for (int j = 0; j < nspec; j++){
+                    energy_spectrum[freq][j] +=
+                    (intensityfield)[block].I_radial_cut[pixel][freq][j] * dA;
+                }
 #else
                 energy_spectrum[freq][0] +=
                     (intensityfield)[block].IQUV[pixel][freq][0] * dA;
