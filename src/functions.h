@@ -111,6 +111,7 @@ void radiative_transfer_polarized(double *lightpath, int steps,
 double radiative_transfer_unpolarized(double *lightpath, int steps,
                                       double *frequency,
                                       double IQUV[num_frequencies][4],
+                                      double I_radial_cut[num_frequencies][5],
                                       double tau[num_frequencies]);
 // METRIC.C
 ///////////
@@ -176,7 +177,7 @@ void evaluate_coeffs_user(double *jI, double *jQ, double *jU, double *jV,
 void evaluate_coeffs_single(double *jI, double *jQ, double *jU, double *jV,
                             double *rQ, double *rU, double *rV, double *aI,
                             double *aQ, double *aU, double *aV, double nu_p,
-                            struct GRMHD modvar, double pitch_ang);
+                            struct GRMHD modvar, double pitch_ang, int rmin, double r_current);
 
 // Return emission coefficient j_nu for kappa distribution function
 double emission_coeff_kappa_FIT(double nu, double Ne, double Thetae, double B,
@@ -259,6 +260,8 @@ double rho_Q_thermal(double theta_e, double n_e, double nu, double B,
 double j_I(double theta_e, double n_e, double nu, double B, double theta_B);
 double j_Q(double theta_e, double n_e, double nu, double B, double theta_B);
 double j_V(double theta_e, double n_e, double nu, double B, double theta_B);
+
+double j_bremss(double nu, double n_e, double theta_e);
 
 double a_I(double theta_e, double n_e, double nu, double B, double theta_B,
            double j_I_thermal);
