@@ -80,6 +80,11 @@ void get_impact_params(struct Camera **intensityfield, int block) {
             for (int s = 0; s < 4; s++) {
                 (*intensityfield)[block].IQUV[pixel][f][s] = 0;
             }
+#if (RADIAL_CUT)
+            for (int s = 0; s < nspec; s++) {
+                (*intensityfield)[block].I_radial_cut[pixel][f][s] = 0;
+            }
+#endif
             (*intensityfield)[block].tau[pixel][f] = 0;
             (*intensityfield)[block].tauF[pixel][f] = 0;
         }
