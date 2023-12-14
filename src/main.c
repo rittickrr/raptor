@@ -89,6 +89,11 @@ int main(int argc, char *argv[]) {
     // These depend on the black hole spin
     set_constants();
 
+#if ((BREMSSTRAHLUNG && DF == KAPPA) || (BREMSSTRAHLUNG && DF == POWER))
+    fprintf(stderr, "ERROR: Bremsstrahlung not compatible with chosen EDF, switching to synchrotron only... \n");
+    #define BREMSSTRAHLUNG (0);
+#endif
+
     // MAIN PROGRAM LOOP
     ////////////////////
 
@@ -169,7 +174,7 @@ int main(int argc, char *argv[]) {
 
     free(intensityfield);
 
-    fprintf(stderr, "\nThat's all folks!\n");
+    fprintf(stderr, "\nThat's all folks! Ciao!!\n");
 
     // END OF PROGRAM
     /////////////////
