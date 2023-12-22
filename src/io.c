@@ -357,3 +357,7 @@ void write_uniform_camera(struct Camera *intensityfield, double frequency,
     }
     fclose(uniformfile);
 }
+
+void write_ray_output(double X_u[4]) {
+    fprintf(rayfile, "%.15e %.15e %.15e\n", get_r(X_u), X_u[2], X_u[3]);
+}
