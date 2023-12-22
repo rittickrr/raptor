@@ -136,6 +136,9 @@ int main(int argc, char *argv[]) {
     prerun_refine(&intensityfield);
 #endif
 
+    rayfile = fopen("output/ray_data.dat","w");
+    geo_counter = 0;
+    
     int block = 0;
 
     while (block  < tot_blocks) { // block_total
