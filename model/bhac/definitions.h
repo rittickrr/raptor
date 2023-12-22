@@ -27,6 +27,8 @@
 
 #define DEBUG (1)
 
+#define PRINT_GEODESIC (0)
+
 #define NDIM 4
 #define NPRIM 8
 
