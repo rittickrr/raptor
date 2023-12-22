@@ -340,6 +340,7 @@ void integrate_geodesic(double alpha, double beta, double *lightpath,
     double thetadot_prev;
     double X_u[4], k_u[4];
     double photon_u[8];
+    double null_arr[4] = {0.0,0.0,0.0,0.0};
     // Create initial ray conditions
     initialize_photon(alpha, beta, photon_u, t_init);
     LOOP_i X_u[i] = photon_u[i];
@@ -394,6 +395,11 @@ void integrate_geodesic(double alpha, double beta, double *lightpath,
         // dlambda_adaptive = -STEPSIZE;
         dlambda_adaptive = stepsize(X_u, k_u);
 
+#if (PRINT_GEODESIC)
+	if (geo_counter == 2)
+		write_ray_output(X_u);
+#endif
+
         // Advance ray/particle
 #if (int_method == RK2)
 
@@ -424,4 +430,11 @@ void integrate_geodesic(double alpha, double beta, double *lightpath,
 
         *steps = *steps + 1;
     }
+
+#if (PRINT_GEODESIC)
+	if (geo_counter == 2)
+		write_ray_output(null_arr);
+#endif
+
+
 }
