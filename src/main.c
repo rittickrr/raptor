@@ -157,6 +157,8 @@ int main(int argc, char *argv[]) {
 #endif
     }
 
+    fclose(rayfile);
+
     fprintf(stderr, "\nRay tracing done!\n\n");
 
     compute_spec(intensityfield, energy_spectrum);
