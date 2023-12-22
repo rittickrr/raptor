@@ -297,6 +297,8 @@ void write_image_IQUV(FILE *imgfile, double *Ifield, double *Qfield,
 void write_VTK_image(FILE *imgfile, double *intensityfield, double *lambdafield,
                      double scalefactor);
 
+void write_ray_output(double X_u);
+
 // RAPTOR_HARM_MODEL.C
 //////////////////////
 
